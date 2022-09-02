@@ -1,0 +1,12 @@
+int16 pitch
+int16 roll
+int16 yaw
+int16 speed_x
+int16 speed_y
+int16 speed_z
+float32 acceleration_x
+float32 acceleration_y
+float32 acceleration_z
+int32 rel_height
+int32 abs_height
+int16 battery
