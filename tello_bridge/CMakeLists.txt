@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  sensor_msgs
+  cv_bridge
 )
 
 ## System dependencies are found with CMake's conventions
@@ -72,6 +74,7 @@ find_package(catkin REQUIRED COMPONENTS
    DEPENDENCIES
    geometry_msgs
    std_msgs
+   sensor_msgs
  )
 
 ################################################
@@ -106,7 +109,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES tello_bridge
-  CATKIN_DEPENDS geometry_msgs rospy std_msgs message_runtime
+  CATKIN_DEPENDS geometry_msgs rospy std_msgs message_runtime sensor_msgs cv_bridge
 #  DEPENDS system_lib
 )
 
