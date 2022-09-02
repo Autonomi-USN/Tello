@@ -27,18 +27,21 @@ class Tello_Bridge_Node:
         
         rospy.Subscriber("/cmd_vel", Twist, self.callback)
         self.pub = rospy.Publisher("tello_data", Tello_data, queue_size=10)
-        self.image_pub = rospy.Publisher("image_topic_tello", Image)
+        self.image_pub = rospy.Publisher("image_tello", Image)
         self.command_frequency = 1.0/10.0
 
         self.tello.connect()
         self.tello.set_speed(self.speed)
         self.tello.streamoff()
         self.tello.set_video_resolution(self.tello.RESOLUTION_480P)
+        self.height_base = self.tello.get_barometer()
         self.tello_get_data()
         self.tello.streamon()
         self.frame_read = self.tello.get_frame_read()
-        #self.tello.takeoff()
         self.frame = self.frame_read.frame
+        self.tello_get_video()
+        self.tello.takeoff()
+        
         #Calls communication 
         rospy.Timer(rospy.Duration(self.command_frequency),self.send_to_tello)
 
@@ -57,7 +60,7 @@ class Tello_Bridge_Node:
         Args:
             event (_type_, optional): _description_. Defaults to None.
         """
-        #self.tello.send_rc_control(self.rc['a'], self.rc['b'], self.rc['c'], self.rc['d'],)
+        self.tello.send_rc_control(self.rc['a'], self.rc['b'], self.rc['c'], self.rc['d'],)
         self.tello_get_data()
         self.tello_get_video()
 
@@ -73,27 +76,22 @@ class Tello_Bridge_Node:
         self.data_msg.pitch = int(self.tello.get_pitch())
         self.data_msg.roll = int(self.tello.get_roll())
         self.data_msg.yaw = int(self.tello.get_yaw())
-        self.data_msg.speed_x = int(self.tello.get_speed_x())
-        self.data_msg.speed_y = int(self.tello.get_speed_y())
-        self.data_msg.speed_z = int(self.tello.get_speed_z())
-        self.data_msg.acceleration_x = float(self.tello.get_acceleration_x())
-        self.data_msg.acceleration_y = float(self.tello.get_acceleration_y())
-        self.data_msg.acceleration_z = float(self.tello.get_acceleration_z())
-        self.data_msg.rel_height = int(self.tello.get_height())
-        self.data_msg.abs_height = int(self.tello.get_barometer())
+        self.data_msg.speed_x = self.tello.get_speed_x()/10.0
+        self.data_msg.speed_y = self.tello.get_speed_y()/10.0
+        self.data_msg.speed_z = self.tello.get_speed_z()/10.0
+        self.data_msg.acceleration_x = self.tello.get_acceleration_x()/10.0
+        self.data_msg.acceleration_y = self.tello.get_acceleration_y()/10.0
+        self.data_msg.acceleration_z = self.tello.get_acceleration_z()/10.0
+        self.data_msg.rel_height = ((self.height_base - self.tello.get_barometer())/100.0)*-1.0
+        self.data_msg.abs_height = self.tello.get_barometer()/100.0
         self.data_msg.battery = int(self.tello.get_battery())
         self.pub.publish(self.data_msg)
 
     def tello_get_video(self):
+        """Publishes video stream to image_tello
+        """
         self.frame = self.frame_read.frame
-        #self.frame = cv2.resize(self.frame, (320,240))
         self.frame = self.frame[0:480, 0:640]
-        #self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-        #cv2.imshow("result", self.frame)
-        #cv2.waitKey(1)
-        #self.frame = cv2.cvtColor(self.frame, cv2.COLORBGR2RGB)
-        #self.frame = np.rot90(self.frame)
-        #self.frame = np.flipud(self.frame)
         self.image_message = self.cvBridge.cv2_to_imgmsg(self.frame, encoding="passthrough")
         try:
             self.image_pub.publish(self.image_message)
