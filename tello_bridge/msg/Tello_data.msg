@@ -33,5 +33,8 @@ float32 rel_height
 #Absolute height in m based on barometer
 float32 abs_height
 
+#TOF height based on IR camera
+float32 tof_height
+
 #Percentage of battery
 int16 battery

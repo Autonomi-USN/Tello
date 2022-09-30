@@ -26,7 +26,7 @@ class Tello_Bridge_Node:
         self.data_msg = Tello_data()
         
         rospy.Subscriber("/cmd_vel", Twist, self.callback)
-        self.pub = rospy.Publisher("tello_data", Tello_data, queue_size=10)
+        self.tello_data_pub = rospy.Publisher("tello_data", Tello_data, queue_size=10)
         self.image_pub = rospy.Publisher("image_tello", Image)
         self.command_frequency = 1.0/10.0
 
@@ -79,13 +79,14 @@ class Tello_Bridge_Node:
         self.data_msg.speed_x = self.tello.get_speed_x()/10.0
         self.data_msg.speed_y = self.tello.get_speed_y()/10.0
         self.data_msg.speed_z = self.tello.get_speed_z()/10.0
-        self.data_msg.acceleration_x = self.tello.get_acceleration_x()/10.0
-        self.data_msg.acceleration_y = self.tello.get_acceleration_y()/10.0
-        self.data_msg.acceleration_z = self.tello.get_acceleration_z()/10.0
+        self.data_msg.acceleration_x = self.tello.get_acceleration_x()/100.0
+        self.data_msg.acceleration_y = self.tello.get_acceleration_y()/100.0
+        self.data_msg.acceleration_z = self.tello.get_acceleration_z()/100.0
         self.data_msg.rel_height = ((self.height_base - self.tello.get_barometer())/100.0)*-1.0
-        self.data_msg.abs_height = self.tello.get_barometer()/100.0
+        self.data_msg.abs_height = self.tello.get_barometer()
+        self.data_msg.tof_height = self.tello.get_distance_tof()/100.0
         self.data_msg.battery = int(self.tello.get_battery())
-        self.pub.publish(self.data_msg)
+        self.tello_data_pub.publish(self.data_msg)
 
     def tello_get_video(self):
         """Publishes video stream to image_tello
