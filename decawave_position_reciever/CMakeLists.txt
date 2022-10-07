@@ -51,6 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    Decawave_position.msg
+   Decawave_list.msg
 #   Message2.msg
  )
 
