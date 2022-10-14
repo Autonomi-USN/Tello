@@ -8,6 +8,7 @@ from tello_bridge.msg import Tello_data
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 
+#TODO: change tello implementation to low level: https://github.com/hanyazou/TelloPy/tree/develop-0.7.0/tellopy/examples
 
 class Tello_Bridge_Node:
     def __init__(self):
@@ -22,7 +23,7 @@ class Tello_Bridge_Node:
         #c: up/down -100 = 100% down, +100 = 100% up
         #d: yaw -100 = 100% CCW, +100 = 100% CW
         self.rc = {'a': 0, 'b': 0, 'c' : 0, 'd' : 0}
-        self.speed = 50
+        self.speed = 100
         self.data_msg = Tello_data()
         
         rospy.Subscriber("/cmd_vel", Twist, self.callback)
