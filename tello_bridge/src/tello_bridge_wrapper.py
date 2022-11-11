@@ -2,11 +2,17 @@
 import rospy
 import cv2
 import numpy as np
-from djitellopy import Tello
 from geometry_msgs.msg import Twist
 from tello_bridge.msg import Tello_data
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
+import tellopy
+import time
+import sys
+from subprocess import Popen, PIPE
+import threading
+import av
+import traceback
 
 #TODO: change tello implementation to low level: https://github.com/hanyazou/TelloPy/tree/develop-0.7.0/tellopy/examples
 
@@ -15,24 +21,42 @@ class Tello_Bridge_Node:
         rospy.init_node("tello_bridge_node")
         rospy.loginfo("Starting Tello_Bridge_Node.")
 
+        self.prev_flight_data = None
+        self.run_recv_thread = True
+        self.new_image = None
+        self.flight_data = None
+        self.log_data = None
+        self.speed = 100
+        self.throttle = 0.0
+        self.yaw = 0.0
+        self.pitch = 0.0
+        self.roll = 0.0
+
         self.cvBridge = CvBridge()
-        self.tello = Tello()
+        self.telloNew = tellopy.Tello()
 
         #a: left/right -100 = 100% left, +100 = 100% right
         #b: forward/backward -100 = 100% back, +100 = 100% forward
         #c: up/down -100 = 100% down, +100 = 100% up
         #d: yaw -100 = 100% CCW, +100 = 100% CW
         self.rc = {'a': 0, 'b': 0, 'c' : 0, 'd' : 0}
-        self.speed = 100
         self.data_msg = Tello_data()
         
         rospy.Subscriber("/cmd_vel", Twist, self.callback)
         self.tello_data_pub = rospy.Publisher("tello_data", Tello_data, queue_size=10)
         self.image_pub = rospy.Publisher("image_tello", Image, queue_size=10)
         self.command_frequency = 1.0/10.0
+        self.telloNew.subscribe(self.telloNew.EVENT_FLIGHT_DATA, self.flightDataHandler)
+        self.telloNew.subscribe(self.telloNew.EVENT_VIDEO_FRAME, self.videoFrameHandler)
+        self.telloNew.subscribe(self.telloNew.EVENT_FILE_RECEIVED, self.handleFileRecieved)
 
-        self.tello.connect()
-        self.tello.set_speed(self.speed)
+        self.telloNew.connect()
+        self.telloNew.wait_for_connection(60)
+        self.telloNew.set_roll(self.speed/100.0)
+        self.telloNew.set_pitch(self.speed/100.0)
+        self.telloNew.set_yaw(self.speed/100.0)
+        self.telloNew.set_throttle(self.speed/100.0)
+        
         self.tello.streamoff()
         self.tello.set_video_resolution(self.tello.RESOLUTION_480P)
         self.height_base = self.tello.get_barometer()
@@ -53,6 +77,44 @@ class Tello_Bridge_Node:
         self.rc['b'] = int(clamp(Twist.linear.x * self.speed, -100, 100))
         self.rc['c'] = int(clamp(Twist.linear.z * self.speed, -100, 100))
         self.rc['d'] = int(clamp(Twist.angular.z * -self.speed, -100, 100))
+
+    def recv_thread(self, drone):
+        self.run_recv_thread
+        self.new_image
+        self.flight_data
+        self.log_data
+
+        print('start recv_thread()')
+        try:
+            container = av.open(drone.get_video_stream())
+            # skip first 300 frames
+            frame_skip = 300
+            while True:
+                for frame in container.decode(video=0):
+                    if 0 < frame_skip:
+                        frame_skip = frame_skip - 1
+                        continue
+                    start_time = time.time()
+                    image = cv2.cvtColor(np.array(frame.to_image()), cv2.COLOR_RGB2BGR)
+
+                    if self.flight_data:
+                        print('TelloPy: joystick_and_video ' + str(self.flight_data))
+                        
+                    if self.log_data:
+                        print('MVO: ' + str(self.log_data.mvo))
+                        print('IMU: ' + str(self.log_data.imu)[0:52])
+                        print('     ' + ('IMU: ' + str(self.log_data.imu)[52:]))
+                        
+                    self.new_image = image
+                    if frame.time_base < 1.0/60:
+                        time_base = 1.0/60
+                    else:
+                        time_base = frame.time_base
+                    frame_skip = int((time.time() - start_time)/time_base)
+        except Exception as ex:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            print(ex)
 
     def send_to_tello(self, event=None):
         """
