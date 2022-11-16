@@ -1,40 +1,36 @@
 #Onboard data from the tello drone
+#MVO(Monocular Visual Odometry)(Not very dependable) data:
+#velocity:
+float32 vel_x
+float32 vel_y
+float32 vel_z
+#position:
+float32 pos_x
+float32 pos_y
+float32 pos_z
 
-#Pitch in degrees
-int16 pitch
+#IMU data:
+#Accelerometer:
+float32 acc_x
+float32 acc_y
+float32 acc_z
+#Gyroscope
+float32 gyro_x
+float32 gyro_y
+float32 gyro_z
+#Quaternion
+float32 q0
+float32 q1
+float32 q2
+float32 q3
+#Speed
+float32 vg_x
+float32 vg_y
+float32 vg_z
 
-#Roll in degrees
-int16 roll
-
-#Yaw in degrees
-int16 yaw
-
-#X-axis speed m/s
-float32 speed_x
-
-#Y-axis speed m/s
-float32 speed_y
-
-#Z-axis speed m/s
-float32 speed_z
-
-#Acceleration of the “x” axis
-float32 acceleration_x
-
-#Acceleration of the “y” axis
-float32 acceleration_y
-
-#Acceleration of the “z” axis
-float32 acceleration_z
-
-#Relative height in m
-float32 rel_height
-
-#Absolute height in m based on barometer
-float32 abs_height
-
-#TOF height based on IR camera
-float32 tof_height
-
-#Percentage of battery
-int16 battery
+#Flight data:
+int16 battery_percentage
+int16 height
+int16 ground_speed
+int16 east_speed
+int16 north_speed
