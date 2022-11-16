@@ -361,7 +361,7 @@ class LogNewMvoFeedback(object):
         self.pos_y = 0.0
         self.pos_z = 0.0
         if (data != None):
-            self.update(data, count)
+            self.update(data, self.count)
 
     def __str__(self):
         return (

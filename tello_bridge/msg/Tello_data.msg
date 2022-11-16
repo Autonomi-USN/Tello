@@ -30,7 +30,7 @@ float32 vg_z
 
 #Flight data:
 int16 battery_percentage
-int16 height
-int16 ground_speed
-int16 east_speed
-int16 north_speed
+float32 height
+float32 ground_speed
+float32 east_speed
+float32 north_speed

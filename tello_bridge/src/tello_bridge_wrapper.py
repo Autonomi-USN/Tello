@@ -14,6 +14,7 @@ import threading
 import av
 import traceback
 
+#TODO: Subscriber for land and takeoff, implement cmd_vel in new library
 
 class Tello_Bridge_Node:
     def __init__(self):
@@ -67,9 +68,8 @@ class Tello_Bridge_Node:
         
         threading.Thread(target=self.recv_thread, args=[self.telloNew]).start()
         
-        #self.telloNew.takeoff()
+        self.telloNew.takeoff()
 
-        rospy.spin()
 
     def callback(self, Twist):
         self.rc['a'] = int(clamp(Twist.linear.y * -self.speed, -100, 100))
@@ -111,6 +111,7 @@ class Tello_Bridge_Node:
 
                     if self.flight_data:
                         self.tello_flight_data_publish()
+                        #print(self.flight_data.em_sky)
                         
                     if self.log_data:
                         self.tello_log_data_publish()
@@ -138,6 +139,8 @@ class Tello_Bridge_Node:
     def tello_shutdown_sequence(self):
         print('Attempting to land drone')
         self.telloNew.land()
+        while self.flight_data.em_sky != 0:
+            continue
         self.run_recv_thread = False
         self.telloNew.quit()
         
@@ -167,10 +170,10 @@ class Tello_Bridge_Node:
 
     def tello_flight_data_publish(self):
         self.data_msg.battery_percentage = self.flight_data.battery_percentage
-        self.data_msg.east_speed = self.flight_data.east_speed
-        self.data_msg.north_speed = self.flight_data.north_speed
+        self.data_msg.east_speed = self.flight_data.east_speed/10.0
+        self.data_msg.north_speed = self.flight_data.north_speed/10.0
         self.data_msg.ground_speed = self.flight_data.ground_speed
-        self.data_msg.height = self.flight_data.height
+        self.data_msg.height = self.flight_data.height/10.0
         self.tello_data_pub.publish(self.data_msg)
 
 
