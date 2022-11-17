@@ -27,62 +27,36 @@ class Tello_Bridge_Node:
         self.current_image = None
         self.flight_data = None
         self.log_data = None
-        self.speed = 100
-        self.throttle = 0.0
-        self.yaw = 0.0
-        self.pitch = 0.0
-        self.roll = 0.0
 
         self.cvBridge = CvBridge()
-        self.telloNew = tello.Tello()
+        self.tello = tello.Tello()
 
-        #a: left/right -100 = 100% left, +100 = 100% right
-        #b: forward/backward -100 = 100% back, +100 = 100% forward
-        #c: up/down -100 = 100% down, +100 = 100% up
-        #d: yaw -100 = 100% CCW, +100 = 100% CW
-        self.rc = {'a': 0, 'b': 0, 'c' : 0, 'd' : 0}
         self.data_msg = Tello_data()
         
-        rospy.Subscriber("/cmd_vel", Twist, self.callback)
+        rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback)
         self.tello_data_pub = rospy.Publisher("tello_data", Tello_data, queue_size=10)
         self.image_pub = rospy.Publisher("image_tello", Image, queue_size=10)
         self.command_frequency = 1.0/10.0
-        self.telloNew.connect()
-        self.telloNew.wait_for_connection(60)
-        self.telloNew.subscribe(self.telloNew.EVENT_FLIGHT_DATA, self.handler)
-        self.telloNew.subscribe(self.telloNew.EVENT_LOG_DATA, self.handler)
+        self.tello.connect()
+        self.tello.wait_for_connection(60)
+        self.tello.subscribe(self.tello.EVENT_FLIGHT_DATA, self.event_handler)
+        self.tello.subscribe(self.tello.EVENT_LOG_DATA, self.event_handler)
+                
         
-        """
+        threading.Thread(target=self.recv_thread, args=[self.tello]).start()
         
-        self.telloNew.set_roll(self.speed/100.0)
-        self.telloNew.set_pitch(self.speed/100.0)
-        self.telloNew.set_yaw(self.speed/100.0)
-        self.telloNew.set_throttle(self.speed/100.0)
-        """
-        self.telloNew.set_roll(0)
-        self.telloNew.set_pitch(0)
-        self.telloNew.set_yaw(0)
-        self.telloNew.set_throttle(0)
-
-        
-        
-        threading.Thread(target=self.recv_thread, args=[self.telloNew]).start()
-        
-        self.telloNew.takeoff()
+        self.tello.takeoff()
 
 
-    def callback(self, Twist):
-        self.rc['a'] = int(clamp(Twist.linear.y * -self.speed, -100, 100))
-        self.rc['b'] = int(clamp(Twist.linear.x * self.speed, -100, 100))
-        self.rc['c'] = int(clamp(Twist.linear.z * self.speed, -100, 100))
-        self.rc['d'] = int(clamp(Twist.angular.z * -self.speed, -100, 100))
+    def cmd_vel_callback(self, msg):
+        self.tello.set_pitch(clamp(msg.linear.x, -1.0, 1.0))
+        self.tello.set_roll(clamp(-msg.linear.y, -1.0, 1.0))
+        self.tello.set_yaw(clamp(-msg.angular.z, -1.0, 1.0))
+        self.tello.set_throttle(clamp(msg.linear.z, -1.0, 1.0))
 
-    def handler(self, event, sender, data, **args):
+    def event_handler(self, event, sender, data, **args):
         drone = sender
         if event is drone.EVENT_FLIGHT_DATA:
-            if self.prev_flight_data != str(data):
-                print(data)
-                self.prev_flight_data = str(data)
             self.flight_data = data
         elif event is drone.EVENT_LOG_DATA:
             self.log_data = data
@@ -111,7 +85,6 @@ class Tello_Bridge_Node:
 
                     if self.flight_data:
                         self.tello_flight_data_publish()
-                        #print(self.flight_data.em_sky)
                         
                     if self.log_data:
                         self.tello_log_data_publish()
@@ -127,22 +100,14 @@ class Tello_Bridge_Node:
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             print(ex)
 
-    def send_to_tello(self, event=None):
-        """
-        Sends remote controll data to the drone
-
-        Args:
-            event (_type_, optional): _description_. Defaults to None.
-        """
-        self.tello.send_rc_control(self.rc['a'], self.rc['b'], self.rc['c'], self.rc['d'],)
 
     def tello_shutdown_sequence(self):
         print('Attempting to land drone')
-        self.telloNew.land()
+        self.tello.land()
         while self.flight_data.em_sky != 0:
             continue
         self.run_recv_thread = False
-        self.telloNew.quit()
+        self.tello.quit()
         
 
 
