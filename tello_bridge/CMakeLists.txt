@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   sensor_msgs
   cv_bridge
+  actionlib_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -63,11 +64,11 @@ catkin_python_setup()
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+ add_action_files(
+   FILES
+   Land.action
+   Takeoff.action
+ )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
@@ -75,6 +76,7 @@ catkin_python_setup()
    geometry_msgs
    std_msgs
    sensor_msgs
+   actionlib_msgs
  )
 
 ################################################
@@ -109,7 +111,7 @@ catkin_python_setup()
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES tello_bridge
-  CATKIN_DEPENDS geometry_msgs rospy std_msgs message_runtime sensor_msgs cv_bridge
+  CATKIN_DEPENDS geometry_msgs rospy std_msgs message_runtime sensor_msgs cv_bridge actionlib_msgs
 #  DEPENDS system_lib
 )
 

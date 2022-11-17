@@ -1,0 +1,8 @@
+#goal         
+
+---
+#result
+bool success
+---
+#feedback
+int16 seconds_taken
