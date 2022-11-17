@@ -34,3 +34,4 @@ float32 height
 float32 ground_speed
 float32 east_speed
 float32 north_speed
+bool landed

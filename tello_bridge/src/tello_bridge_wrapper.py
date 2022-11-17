@@ -1,31 +1,26 @@
 #!/usr/bin/env python
 import rospy
 import cv2
-import numpy as np
-from geometry_msgs.msg import Twist
-from tello_bridge.msg import Tello_data
 from cv_bridge import CvBridge, CvBridgeError
-from sensor_msgs.msg import Image
-from tellopy import tello
-from tellopy import error
-import time
-import sys
-from subprocess import Popen, PIPE
+import numpy as np
 import threading
 import av
 import traceback
+import time
+import sys
+from subprocess import Popen, PIPE
+from tellopy import tello
+from tellopy import error
 import actionlib
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import Twist
+from tello_bridge.msg import Tello_data
 from tello_bridge.msg import TakeoffAction
-from tello_bridge.msg import TakeoffGoal
 from tello_bridge.msg import TakeoffResult
 from tello_bridge.msg import TakeoffFeedback
 from tello_bridge.msg import LandAction
-from tello_bridge.msg import LandGoal
 from tello_bridge.msg import LandResult
 from tello_bridge.msg import LandFeedback
-
-
-#TODO: Subscriber for land and takeoff
 
 class Tello_Bridge_Node:
     def __init__(self):
@@ -39,6 +34,7 @@ class Tello_Bridge_Node:
         self.flight_data = None
         self.log_data = None
         self.connection_quit = None
+        self.landed = True
 
         self.cvBridge = CvBridge()
         self.tello = tello.Tello()
@@ -49,17 +45,19 @@ class Tello_Bridge_Node:
         self.takeoff_feedback = TakeoffFeedback()
         self.takeoff_result = TakeoffResult()
         
-        rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback)
+        rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_cb)
         self.as_takeoff = actionlib.SimpleActionServer("tello_takeoff", TakeoffAction, execute_cb=self.takeoff_execute_cb, auto_start=False)
         self.as_land = actionlib.SimpleActionServer("tello_land", LandAction, execute_cb=self.land_execute_cb, auto_start=False)
         self.as_takeoff.start()
+        rospy.loginfo("Starting takeoff actionserver")
         self.as_land.start()
+        rospy.loginfo("Starting land actionserver")
 
         self.tello_data_pub = rospy.Publisher("tello_data", Tello_data, queue_size=10)
         self.image_pub = rospy.Publisher("tello_image", Image, queue_size=10)
-        self.command_frequency = 1.0/10.0
         self.connection_quit = True
         self.tello.connect()
+        rospy.loginfo("Connecting to Tello drone")
         try:
             self.tello.wait_for_connection(10)
         except error.TelloError as err:
@@ -67,20 +65,20 @@ class Tello_Bridge_Node:
             rospy.signal_shutdown(str(err))
             self.tello.quit()
             return
+        rospy.loginfo("Connected to Tello drone")
         self.connection_quit = False
         self.tello.subscribe(self.tello.EVENT_FLIGHT_DATA, self.event_handler)
         self.tello.subscribe(self.tello.EVENT_LOG_DATA, self.event_handler)
-                
-        
         threading.Thread(target=self.recv_thread, args=[self.tello]).start()
         
         
 
     def takeoff_execute_cb(self, goal):
+        rospy.loginfo("Attempting to takeoff drone")
         self.tello.takeoff()
         count = 0
         timer = time.time()
-        success = True
+        self.takeoff_result = True
         while self.flight_data.em_sky == 0:
             if time.time() - timer > 1:
                 timer = time.time()
@@ -88,31 +86,39 @@ class Tello_Bridge_Node:
                 self.takeoff_feedback=count
                 self.as_takeoff.publish_feedback(self.takeoff_feedback)
             if count > 20:
-                success = False
+                self.takeoff_result = False
+                rospy.logerr("Failed to takeoff drone")
                 break
-        self.takeoff_result = success
+        if self.takeoff_result:
+            self.landed = False
+            rospy.loginfo("Takeoff successfull")
         self.as_takeoff.set_succeeded(self.takeoff_result)
 
             
 
     def land_execute_cb(self, goal):
+        rospy.loginfo("Attempting to land drone")
         self.tello.land()
         count = 0
         timer = time.time()
-        success = True
+        self.land_result = True
         while self.flight_data.em_sky != 0:
             if time.time() - timer > 1:
                 timer = time.time()
                 count+=1
                 self.as_land.publish_feedback(count)
             if count > 10:
-                success = False
+                self.land_result = False
+                rospy.logerr("Failed to land drone")
                 break
-        self.as_land.set_succeeded(success)
+        if self.land_result:
+            self.landed = True
+            rospy.loginfo("Landing successfull")
+        self.as_land.set_succeeded(self.land_result)
 
 
 
-    def cmd_vel_callback(self, msg):
+    def cmd_vel_cb(self, msg):
         if self.flight_data.em_sky != 0:
             self.tello.set_pitch(clamp(msg.linear.x, -1.0, 1.0))
             self.tello.set_roll(clamp(-msg.linear.y, -1.0, 1.0))
@@ -129,6 +135,7 @@ class Tello_Bridge_Node:
             print('event="%s" data=%s' % (event.getname(), str(data)))
 
     def recv_thread(self, drone):
+        rospy.loginfo("Tello recieve data thread started")
         print('start recv_thread()')
         try:
             container = av.open(drone.get_video_stream())
@@ -169,6 +176,7 @@ class Tello_Bridge_Node:
     def tello_shutdown_sequence(self):
         if not self.connection_quit:
             print('Attempting to land drone')
+            rospy.loginfo("Attempting to land drone")
             self.tello.land()
             while self.flight_data.em_sky != 0:
                 continue
@@ -197,6 +205,7 @@ class Tello_Bridge_Node:
         self.data_msg.q1 = self.log_data.imu.q1
         self.data_msg.q2 = self.log_data.imu.q2
         self.data_msg.q3 = self.log_data.imu.q3
+        self.data_msg.landed = self.landed
         self.tello_data_pub.publish(self.data_msg)
 
     def tello_flight_data_publish(self):
@@ -205,6 +214,7 @@ class Tello_Bridge_Node:
         self.data_msg.north_speed = self.flight_data.north_speed/10.0
         self.data_msg.ground_speed = self.flight_data.ground_speed
         self.data_msg.height = self.flight_data.height/10.0
+        self.data_msg.landed = self.landed
         self.tello_data_pub.publish(self.data_msg)
 
         
@@ -225,5 +235,4 @@ def clamp(n, minn, maxn):
 if __name__ == "__main__":
     tello_bridge_node = Tello_Bridge_Node()
     rospy.on_shutdown(tello_bridge_node.tello_shutdown_sequence)
-    
     rospy.spin()
