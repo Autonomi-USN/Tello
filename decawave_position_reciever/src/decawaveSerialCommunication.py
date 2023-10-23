@@ -22,7 +22,7 @@ class Decawave_Bridge_Node:
         time.sleep(1)
         self.DWM.write("lec\r".encode())
         time.sleep(1)
-        self.publish_decawave_data()
+
 
     def decawave_shutdown_sequence(self):
         print("Shutting down")
@@ -45,7 +45,7 @@ class Decawave_Bridge_Node:
                         y_pos=parse[4]
                         z_pos=parse[5]
                         #val = (x_pos,y_pos)
-                        #print(dwm_name, ": ", datetime.datetime.now().strftime("%H:%M:%S"),"(",x_pos,", ",y_pos,", ",z_pos,")")
+                        print(dwm_name, ": ", datetime.datetime.now().strftime("%H:%M:%S"),"(",x_pos,", ",y_pos,", ",z_pos,")")
                         tag_data = Decawave_position()
                         tag_data.name = dwm_name
                         tag_data.stamp = rospy.rostime.Time().now()
@@ -79,5 +79,6 @@ class Decawave_Bridge_Node:
 if __name__ == "__main__":
     decawave_bridge_node = Decawave_Bridge_Node()
     rospy.on_shutdown(decawave_bridge_node.decawave_shutdown_sequence)
+    decawave_bridge_node.publish_decawave_data()
     
     rospy.spin()
