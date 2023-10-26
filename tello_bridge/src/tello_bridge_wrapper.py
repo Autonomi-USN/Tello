@@ -78,40 +78,39 @@ class Tello_Bridge_Node:
         self.tello.takeoff()
         count = 0
         timer = time.time()
-        self.takeoff_result = True
+        self.takeoff_result.success = True
         while self.flight_data.em_sky == 0:
             if time.time() - timer > 1:
                 timer = time.time()
                 count+=1
-                self.takeoff_feedback=count
+                self.takeoff_feedback.seconds_taken=count
                 self.as_takeoff.publish_feedback(self.takeoff_feedback)
             if count > 20:
-                self.takeoff_result = False
+                self.takeoff_result.success = False
                 rospy.logerr("Failed to takeoff drone")
                 break
-        if self.takeoff_result:
+        if self.takeoff_result.success:
             self.landed = False
             rospy.loginfo("Takeoff successfull")
-        self.as_takeoff.set_succeeded(self.takeoff_result)
-
-            
+        self.as_takeoff.set_succeeded(self.takeoff_result)            
 
     def land_execute_cb(self, goal):
         rospy.loginfo("Attempting to land drone")
         self.tello.land()
         count = 0
         timer = time.time()
-        self.land_result = True
+        self.land_result.success = True
         while self.flight_data.em_sky != 0:
             if time.time() - timer > 1:
                 timer = time.time()
                 count+=1
-                self.as_land.publish_feedback(count)
+                self.land_feedback.seconds_taken=count
+                self.as_land.publish_feedback(self.land_feedback)
             if count > 10:
-                self.land_result = False
+                self.land_result.success = False
                 rospy.logerr("Failed to land drone")
                 break
-        if self.land_result:
+        if self.land_result.success:
             self.landed = True
             rospy.loginfo("Landing successfull")
         self.as_land.set_succeeded(self.land_result)
