@@ -1,7 +1,15 @@
 <launch>
+
+    <param name="robot_description" textfile="$(find tello_description)/urdf/tello.urdf"/>
+
+    <include file="$(find tello_launch)/launch/static_transforms.launch"/>
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" />
     <node pkg="tello_bridge" type="simple_tello_bridge_wrapper.py" name="simple_tello_bridge_wrapper"/>
     <node pkg="decawave_position_reciever" type="decawaveSerialCommunication.py" name="decawaveSerialCommunication"/>
+    <node pkg="decawave_position_reciever" type="decawave_odom.py" name="decawave_odom"/>
+
     <node pkg="tello_bridge" type="imu_publish.py" name="tello_imu_publisher"/>
     <node pkg="tello_bridge" type="odom_publish.py" name="tello_odom_publisher"/>
+
 
 </launch>

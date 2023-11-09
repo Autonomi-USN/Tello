@@ -19,7 +19,7 @@ class ImuNode:
         msg.header = std_msgs.msg.Header(self.seq, rospy.get_rostime(), ODOM_FRAME)
         msg.child_frame_id = FRAME
         msg.pose.pose.position = geometry_msgs.msg.Point(tello_msg.pos_x, tello_msg.pos_y, tello_msg.pos_z)
-        msg.twist.twist.linear = geometry_msgs.msg.Vector3(tello_msg.vel_x, tello_msg.vel_y, tello_msg.vel_z)
+        msg.twist.twist.linear = geometry_msgs.msg.Vector3(tello_msg.vel_x, -tello_msg.vel_y, -tello_msg.vel_z)
         self.imu_pub.publish(msg)
         self.seq += 1
 
