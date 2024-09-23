@@ -1,6 +1,6 @@
 <h1 align="center">
     <img alt="Tello Edu" ttle="Tello Edu" src="https://www.eduporium.com/media/catalog/product/cache/344839f5026348e9ff213e0be9a4da00/t/e/tello_edu_front.png" />
-    <p>Tello Wrapper</p>
+    <p>Tello ROS2 Wrapper</p>
 </h1>
 
 <p align="center">
@@ -10,7 +10,6 @@
   <a href="#dependencies">Dependencies</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#how-to-run">How to Run</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#troubleshooting">Troubleshooting</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-  <a href="#next-features">Next features</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#possible-bugs">References</a>
 </p>
 
@@ -20,32 +19,15 @@
 
 This project has as objective to create a simple ROS Wrapper for the [DJI Tello Edu](https://djioslo.no/produkt/tello/tello-edu/) drone, enabling the programmers to control the drone through ROS framework. The packages are based on a Python framework.
 
-The current nodes provides a way to move the drone through topics and send commands as take-off and land as ROS actions.
-
-Currently this only allows to control the drones individually, but one of the features to be developed is the control of a swarm.
-
 ## Packages description
 
-### decawave_position_reciever
+### tello_interfaces
 
-_On going project_ Beacon related code. On going project, so no much info about it :)
-
-### tello_actions
-
-Action Clients for **/tello_takeoff** and **/tello_land**. More actions to be added in future implementations.
+Messages, services and actions related to the Tello operations.
 
 ### tello_bridge
 
-The main package, it generates the node that process commands and logs from Tello. More information about the wrapper package and how to run the node can be found [here](https://github.com/Autonomi-USN/Tello/blob/main/README.md#run-wrapper).
-
-### tello_description
-
-Package with the URDF model of the drone, that can be loaded in RVIZ or Gazebo. The drone model is in the image below.
-More information about how to run this model can be found [here](https://github.com/Autonomi-USN/Tello/blob/main/README.md#load-urdf-model-in-rviz).
-
-<h1 align="center">
-    <img alt="Tello URDF" ttle="Tello URDF" src="https://drive.google.com/uc?export=view&id=162GEslMUVWNZDGODDaUxdm3AxNXjyJdQ" style="width: 650px; max-width: 100%; height: auto" />
-</h1>
+The main package, it generates the node that process commands and logs from Tello.
 
 ## How to Connect with Drone
 
@@ -75,13 +57,13 @@ If a ROS workspace created was not created yet, just run the following commands:
 
 ```
 $ cd ~
-$ mkdir -p ~/catkin_ws/src
+$ mkdir -p ~/ros2_ws/src
 ```
 
-Now paste the packages inside ~/catkin_ws/src. After that, use rosdep to install all the ROS dependencies.
+Now paste the packages inside ~/ros2_ws/src. After that, use rosdep to install all the ROS dependencies.
 
 ```
-$ cd ~/catkin_ws/
+$ cd ~/ros2_ws/
 $ rosdep install --from-paths src --ignore-src -r -y
 ```
 
@@ -90,44 +72,21 @@ Now we can build.
 ### Build
 
 ```
-$ cd ~/catkin_ws/
-$ catkin_make
+$ cd ~/ros2_ws/
+$ colcon build
 ```
 
 ### Run Wrapper
 
 ```
-$ cd ~/catkin_ws/
-$ source devel/setup.bash
-$ rosrun tello_bridge tello_bridge_wrapper.py
+$ cd ~/ros2_ws/
+$ source install/setup.bash
+$ ros2 run tello_bridge tello_bridge_node
 ```
 
-After that, **/tello_bridge_node** is created. This node publishes all the telemetry data in the **/tello_data** topic. The structure of this topic can be found [here](https://github.com/Autonomi-USN/Tello/blob/main/tello_bridge/msg/Tello_data.msg).
+After that, **/tello_bridge_node** is created. This node publishes all the telemetry data in the **/tello_data** topic.
 
-This node also have a subscriber, named **/cmd_vel**, used to move the robot. you need to publish a Twist message, with the values of translation and rotation of the drone. The structure of a Twist message can be found [here](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Twist.html).
-
-ROS Actions are used to take-off and land the drone. To take-off, open another terminal and run the command
-
-```
-$ source devel/setup.bash
-$ rosrun tello_actions tello_takeoff_client
-```
-
-And to land
-
-```
-$ source devel/setup.bash
-$ rosrun tello_actions tello_land_client
-```
-
-### Load URDF model in RVIZ
-
-To open the URDF model of _tello_description_ package you just need to open another terminal and run the following code:
-
-```
-$ source devel/setup.bash
-$ roslaunch urdf_tutorial display.launch model:='$(find tello_description)/urdf/tello.urdf'
-```
+This node also have a subscriber, named **/cmd_vel**, used to move the robot. you need to publish a Twist message, with the values of translation and rotation of the drone.
 
 ## Troubleshooting
 
@@ -135,16 +94,6 @@ $ roslaunch urdf_tutorial display.launch model:='$(find tello_description)/urdf/
 
 Battery may be too low
 Wifi may be disconnected
-
-## Next features
-
-- [ ] Integrate decawave (see [this branch](https://github.com/Autonomi-USN/Tello/tree/edvart))
-- [ ] Node for the TF of the drone (see [this branch](https://github.com/Autonomi-USN/Tello/tree/edvart))
-- [ ] Perform unit tests in all nodes
-- [ ] Create a config file for all user-defined parameters
-- [ ] Create roslaunch files
-- [ ] Action implementation for more commands
-- [ ] Swarm integration
 
 ## References
 
@@ -154,7 +103,3 @@ Subscribes:
 Publishes:
 /tello_data
 /tello_image
-
-Actions
-/tello_land
-/tello_takeoff
