@@ -18,6 +18,8 @@
 
 ## About the Project
 
+(For ROS2 packages, [visit here](https://github.com/Autonomi-USN/Tello/tree/ros2))
+
 This project has as objective to create a simple ROS Wrapper for the [DJI Tello Edu](https://djioslo.no/produkt/tello/tello-edu/) drone, enabling the programmers to control the drone through ROS framework. The packages are based on a Python framework.
 
 The current nodes provides a way to move the drone through topics and send commands as take-off and land as ROS actions.
