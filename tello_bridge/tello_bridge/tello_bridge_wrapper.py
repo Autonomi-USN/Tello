@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Any
 import rclpy
 from rclpy.node import Node
 import cv2
@@ -9,6 +10,7 @@ import av
 import traceback
 import time
 import sys
+from tello_bridge.tellopy.event import Event
 from subprocess import Popen, PIPE
 import tello_bridge.tellopy.tello as tello
 import tello_bridge.tellopy.error as error
@@ -19,7 +21,7 @@ from tello_interfaces.msg import TelloData
 from tello_interfaces.action import Takeoff, Land
 
 class TelloBridgeNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__('tello_bridge_node')
         self.get_logger().info("Starting TelloBridgeNode.")
 
@@ -43,12 +45,19 @@ class TelloBridgeNode(Node):
         self.takeoff_result = Takeoff.Result()
 
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_cb, 10)
-        self.as_takeoff = ActionServer(self, Takeoff, 'tello_takeoff', self.takeoff_execute_cb)
-        self.as_land = ActionServer(self, Land, 'tello_land', self.land_execute_cb)
+        self.as_takeoff = ActionServer(self, Takeoff, '/tello_takeoff', self.takeoff_execute_cb)
+        self.as_land = ActionServer(self, Land, '/tello_land', self.land_execute_cb)
         self.get_logger().info("Takeoff and land action servers started")
 
         self.tello_data_pub = self.create_publisher(TelloData, 'tello_data', 10)
         self.image_pub = self.create_publisher(Image, 'tello_image', 10)
+        
+        self.tello_connect()
+        self.tello.subscribe(self.tello.EVENT_FLIGHT_DATA, self.event_handler)
+        self.tello.subscribe(self.tello.EVENT_LOG_DATA, self.event_handler)
+        threading.Thread(target=self.recv_thread, args=[self.tello]).start()
+
+    def tello_connect(self) -> None:
         self.connection_quit = True
         self.tello.connect()
         self.get_logger().info("Connecting to Tello drone")
@@ -61,11 +70,9 @@ class TelloBridgeNode(Node):
             return
         self.get_logger().info("Connected to Tello drone")
         self.connection_quit = False
-        self.tello.subscribe(self.tello.EVENT_FLIGHT_DATA, self.event_handler)
-        self.tello.subscribe(self.tello.EVENT_LOG_DATA, self.event_handler)
-        threading.Thread(target=self.recv_thread, args=[self.tello]).start()
+        
 
-    def takeoff_execute_cb(self, goal_handle):
+    def takeoff_execute_cb(self, goal_handle: Takeoff) -> None:
         self.get_logger().info("Attempting to takeoff drone")
         self.tello.takeoff()
         count = 0
@@ -87,7 +94,7 @@ class TelloBridgeNode(Node):
         goal_handle.succeed()
         goal_handle.set_result(self.takeoff_result)
 
-    def land_execute_cb(self, goal_handle):
+    def land_execute_cb(self, goal_handle: Land) -> None:
         self.get_logger().info("Attempting to land drone")
         self.tello.land()
         count = 0
@@ -109,14 +116,14 @@ class TelloBridgeNode(Node):
         goal_handle.succeed()
         goal_handle.set_result(self.land_result)
 
-    def cmd_vel_cb(self, msg):
+    def cmd_vel_cb(self, msg: Twist) -> None:
         if self.flight_data.em_sky != 0:
-            self.tello.set_pitch(clamp(msg.linear.x, -1.0, 1.0))
-            self.tello.set_roll(clamp(-msg.linear.y, -1.0, 1.0))
-            self.tello.set_yaw(clamp(-msg.angular.z, -1.0, 1.0))
-            self.tello.set_throttle(clamp(msg.linear.z, -1.0, 1.0))
+            self.tello.set_pitch(self.clamp(msg.linear.x, -1.0, 1.0))
+            self.tello.set_roll(self.clamp(-msg.linear.y, -1.0, 1.0))
+            self.tello.set_yaw(self.clamp(-msg.angular.z, -1.0, 1.0))
+            self.tello.set_throttle(self.clamp(msg.linear.z, -1.0, 1.0))
 
-    def event_handler(self, event, sender, data, **args):
+    def event_handler(self, event: Event, sender: tello.Tello, data: Any, **args) -> None:
         drone = sender
         if event is drone.EVENT_FLIGHT_DATA:
             self.flight_data = data
@@ -125,7 +132,7 @@ class TelloBridgeNode(Node):
         else:
             print(f'event="{event.getname()}" data={str(data)}')
 
-    def recv_thread(self, drone):
+    def recv_thread(self, drone: tello.Tello) -> None:
         self.get_logger().info("Tello receive data thread started")
         if self.handle_img:
             try:
@@ -172,7 +179,7 @@ class TelloBridgeNode(Node):
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 print(ex)
 
-    def tello_shutdown_sequence(self):
+    def tello_shutdown_sequence(self) -> None:
         if not self.connection_quit:
             self.get_logger().info("Attempting to land drone")
             self.tello.land()
@@ -181,7 +188,7 @@ class TelloBridgeNode(Node):
         self.run_recv_thread = False
         self.tello.quit()
 
-    def tello_log_data_publish(self):
+    def tello_log_data_publish(self) -> None:
         self.data_msg.vel_x = self.log_data.mvo.vel_x
         self.data_msg.vel_y = self.log_data.mvo.vel_y
         self.data_msg.vel_z = self.log_data.mvo.vel_z
@@ -204,7 +211,7 @@ class TelloBridgeNode(Node):
         self.data_msg.landed = self.landed
         self.tello_data_pub.publish(self.data_msg)
 
-    def tello_flight_data_publish(self):
+    def tello_flight_data_publish(self) -> None:
         self.data_msg.battery_percentage = self.flight_data.battery_percentage
         self.data_msg.east_speed = self.flight_data.east_speed / 10.0
         self.data_msg.north_speed = self.flight_data.north_speed / 10.0
@@ -212,11 +219,11 @@ class TelloBridgeNode(Node):
         self.data_msg.height = self.flight_data.height / 10.0
         self.data_msg.landed = self.landed
         self.tello_data_pub.publish(self.data_msg)
-
-
-def clamp(n, minn, maxn):
-    return max(min(maxn, n), minn)
-
+        
+    @staticmethod    
+    def clamp(n: float, minn: float, maxn: float) -> None:
+        return max(min(maxn, n), minn)
+    
 
 def main(args=None):
     rclpy.init(args=args)
