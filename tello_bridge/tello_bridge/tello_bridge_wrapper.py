@@ -9,7 +9,7 @@ import threading
 import av
 import traceback
 import time
-import sys
+
 from tello_bridge.tellopy.event import Event
 import tello_bridge.tellopy.tello as tello
 import tello_bridge.tellopy.error as error
@@ -32,7 +32,7 @@ class TelloBridgeNode(Node):
         self.setup_publishers()
         
         self.tello_connect()
-
+        
     # ------ Initializing the system ------ #
     
     def initialize_variables(self) -> None:
@@ -129,8 +129,8 @@ class TelloBridgeNode(Node):
         if self.flight_data.em_sky != 0:
             self.tello.set_pitch(self.clamp(msg.linear.x, -1.0, 1.0))
             self.tello.set_roll(self.clamp(-msg.linear.y, -1.0, 1.0))
-            self.tello.set_yaw(self.clamp(-msg.angular.z, -1.0, 1.0))
-            self.tello.set_throttle(self.clamp(msg.linear.z, -1.0, 1.0))
+            self.tello.set_yaw(self.clamp(-msg.angular.z, -1.0, 1.0)) # this is wrong too
+            self.tello.set_throttle(self.clamp(msg.linear.z, -1.0, 1.0)) # vel z is not only throttle
 
     # ------ Tello Data Handling ------ #
 
@@ -232,42 +232,44 @@ class TelloBridgeNode(Node):
     def tello_imu_publish(self) -> None:
         imu_msg = Imu()
         imu_msg.header.stamp = self.get_clock().now().to_msg()
-
-        imu_msg.orientation.x = self.log_data.imu.q0
-        imu_msg.orientation.y = self.log_data.imu.q1
-        imu_msg.orientation.z = self.log_data.imu.q2
-        imu_msg.orientation.w = self.log_data.imu.q3
+        imu_msg.header.frame_id = "base_link"
+        imu_msg.orientation.w = self.log_data.imu.q0
+        imu_msg.orientation.x = self.log_data.imu.q1
+        imu_msg.orientation.y = -self.log_data.imu.q2
+        imu_msg.orientation.z = -self.log_data.imu.q3
 
         imu_msg.angular_velocity.x = self.log_data.imu.gyro_x
-        imu_msg.angular_velocity.y = self.log_data.imu.gyro_y
-        imu_msg.angular_velocity.z = self.log_data.imu.gyro_z
+        imu_msg.angular_velocity.y = -self.log_data.imu.gyro_y
+        imu_msg.angular_velocity.z = -self.log_data.imu.gyro_z
 
         imu_msg.linear_acceleration.x = self.log_data.imu.acc_x
-        imu_msg.linear_acceleration.y = self.log_data.imu.acc_x
-        imu_msg.linear_acceleration.z = self.log_data.imu.acc_x
-
+        imu_msg.linear_acceleration.y = -self.log_data.imu.acc_y
+        imu_msg.linear_acceleration.z = -self.log_data.imu.acc_z
+        
         self.tello_imu_pub.publish(imu_msg)
 
     def tello_odom_publish(self) -> None:
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
+        odom_msg.header.frame_id = "odom"
+        odom_msg.child_frame_id = "base_link"
         
         odom_msg.pose.pose.position.x = self.log_data.mvo.pos_x
-        odom_msg.pose.pose.position.y = self.log_data.mvo.pos_y
-        odom_msg.pose.pose.position.z = self.log_data.mvo.pos_z
+        odom_msg.pose.pose.position.y = -self.log_data.mvo.pos_y
+        odom_msg.pose.pose.position.z = -self.log_data.mvo.pos_z
 
-        odom_msg.pose.pose.orientation.x = self.log_data.imu.q0
-        odom_msg.pose.pose.orientation.y = self.log_data.imu.q1
-        odom_msg.pose.pose.orientation.z = self.log_data.imu.q2
-        odom_msg.pose.pose.orientation.w = self.log_data.imu.q3
+        odom_msg.pose.pose.orientation.w = self.log_data.imu.q0
+        odom_msg.pose.pose.orientation.x = self.log_data.imu.q1
+        odom_msg.pose.pose.orientation.y = -self.log_data.imu.q2
+        odom_msg.pose.pose.orientation.z = -self.log_data.imu.q3
 
-        odom_msg.twist.twist.linear.x = self.log_data.mvo.pos_x
-        odom_msg.twist.twist.linear.y = self.log_data.mvo.pos_y
-        odom_msg.twist.twist.linear.z = self.log_data.mvo.pos_z
+        odom_msg.twist.twist.linear.x = self.log_data.mvo.vel_x
+        odom_msg.twist.twist.linear.y = -self.log_data.mvo.vel_y
+        odom_msg.twist.twist.linear.z = -self.log_data.mvo.vel_z
 
         odom_msg.twist.twist.angular.x = self.log_data.imu.gyro_x
-        odom_msg.twist.twist.angular.y = self.log_data.imu.gyro_y
-        odom_msg.twist.twist.angular.z = self.log_data.imu.gyro_z
+        odom_msg.twist.twist.angular.y = -self.log_data.imu.gyro_y
+        odom_msg.twist.twist.angular.z = -self.log_data.imu.gyro_z
         
         self.tello_odom_pub.publish(odom_msg)
 
