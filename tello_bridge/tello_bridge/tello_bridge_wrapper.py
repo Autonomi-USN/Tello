@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Any
+from typing import Any, Callable, Union
 import rclpy
 from rclpy.node import Node
 import cv2
@@ -9,7 +9,7 @@ import threading
 import av
 import traceback
 import time
-
+import sys
 from tello_bridge.tellopy.event import Event
 import tello_bridge.tellopy.tello as tello
 import tello_bridge.tellopy.error as error
@@ -32,7 +32,7 @@ class TelloBridgeNode(Node):
         self.setup_publishers()
         
         self.tello_connect()
-        
+
     # ------ Initializing the system ------ #
     
     def initialize_variables(self) -> None:
@@ -91,18 +91,21 @@ class TelloBridgeNode(Node):
         
     # ------ Action Server Handling ------ #
     
-    def takeoff_execute_cb(self, goal_handle: Takeoff) -> None:
+    def takeoff_execute_cb(self, goal_handle: Takeoff.Goal) -> Takeoff.Result:
         self.get_logger().info("Attempting to takeoff drone")
-        self.execute_drone_action(self.tello.takeoff, goal_handle, "Takeoff", 20)
+        return self.execute_drone_action(self.tello.takeoff, goal_handle, "Takeoff", 20)
 
-    def land_execute_cb(self, goal_handle: Land) -> None:
+    def land_execute_cb(self, goal_handle: Land.Goal) -> Land.Result:
         self.get_logger().info("Attempting to land drone")
-        self.execute_drone_action(self.tello.land, goal_handle, "Landing", 10)
+        return self.execute_drone_action(self.tello.land, goal_handle, "Landing", 10)
 
-    def execute_drone_action(self, action_func, goal_handle, action_name, timeout) -> None:
+
+    def execute_drone_action(self, action_func: Callable, goal_handle: Union[Takeoff.Goal, Land.Goal], action_name: str, timeout: int) -> Union[Takeoff.Result, Land.Result]:
         action_func()
         feedback, result = (self.takeoff_feedback, self.takeoff_result) if action_name == "Takeoff" else (self.land_feedback, self.land_result)
-        result.success = True
+
+        # Initialize result correctly
+        result.success = True  # Assuming this is a boolean field
 
         count = 0
         timer = time.time()
@@ -120,8 +123,13 @@ class TelloBridgeNode(Node):
         if result.success:
             self.landed = (action_name == "Landing")
             self.get_logger().info(f"{action_name} successful")
+        
+        # Mark the goal as succeeded
         goal_handle.succeed()
-        goal_handle.set_result(result)
+
+        # Return the result
+        return result
+
 
     # ------ Subscriber Callback Handling ------ #
 
@@ -129,8 +137,8 @@ class TelloBridgeNode(Node):
         if self.flight_data.em_sky != 0:
             self.tello.set_pitch(self.clamp(msg.linear.x, -1.0, 1.0))
             self.tello.set_roll(self.clamp(-msg.linear.y, -1.0, 1.0))
-            self.tello.set_yaw(self.clamp(-msg.angular.z, -1.0, 1.0)) # this is wrong too
-            self.tello.set_throttle(self.clamp(msg.linear.z, -1.0, 1.0)) # vel z is not only throttle
+            self.tello.set_yaw(self.clamp(-msg.angular.z, -1.0, 1.0))
+            self.tello.set_throttle(self.clamp(msg.linear.z, -1.0, 1.0))
 
     # ------ Tello Data Handling ------ #
 
@@ -232,44 +240,42 @@ class TelloBridgeNode(Node):
     def tello_imu_publish(self) -> None:
         imu_msg = Imu()
         imu_msg.header.stamp = self.get_clock().now().to_msg()
-        imu_msg.header.frame_id = "base_link"
-        imu_msg.orientation.w = self.log_data.imu.q0
-        imu_msg.orientation.x = self.log_data.imu.q1
-        imu_msg.orientation.y = -self.log_data.imu.q2
-        imu_msg.orientation.z = -self.log_data.imu.q3
+
+        imu_msg.orientation.x = self.log_data.imu.q0
+        imu_msg.orientation.y = self.log_data.imu.q1
+        imu_msg.orientation.z = self.log_data.imu.q2
+        imu_msg.orientation.w = self.log_data.imu.q3
 
         imu_msg.angular_velocity.x = self.log_data.imu.gyro_x
-        imu_msg.angular_velocity.y = -self.log_data.imu.gyro_y
-        imu_msg.angular_velocity.z = -self.log_data.imu.gyro_z
+        imu_msg.angular_velocity.y = self.log_data.imu.gyro_y
+        imu_msg.angular_velocity.z = self.log_data.imu.gyro_z
 
         imu_msg.linear_acceleration.x = self.log_data.imu.acc_x
-        imu_msg.linear_acceleration.y = -self.log_data.imu.acc_y
-        imu_msg.linear_acceleration.z = -self.log_data.imu.acc_z
-        
+        imu_msg.linear_acceleration.y = self.log_data.imu.acc_x
+        imu_msg.linear_acceleration.z = self.log_data.imu.acc_x
+
         self.tello_imu_pub.publish(imu_msg)
 
     def tello_odom_publish(self) -> None:
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
-        odom_msg.header.frame_id = "odom"
-        odom_msg.child_frame_id = "base_link"
         
         odom_msg.pose.pose.position.x = self.log_data.mvo.pos_x
-        odom_msg.pose.pose.position.y = -self.log_data.mvo.pos_y
-        odom_msg.pose.pose.position.z = -self.log_data.mvo.pos_z
+        odom_msg.pose.pose.position.y = self.log_data.mvo.pos_y
+        odom_msg.pose.pose.position.z = self.log_data.mvo.pos_z
 
-        odom_msg.pose.pose.orientation.w = self.log_data.imu.q0
-        odom_msg.pose.pose.orientation.x = self.log_data.imu.q1
-        odom_msg.pose.pose.orientation.y = -self.log_data.imu.q2
-        odom_msg.pose.pose.orientation.z = -self.log_data.imu.q3
+        odom_msg.pose.pose.orientation.x = self.log_data.imu.q0
+        odom_msg.pose.pose.orientation.y = self.log_data.imu.q1
+        odom_msg.pose.pose.orientation.z = self.log_data.imu.q2
+        odom_msg.pose.pose.orientation.w = self.log_data.imu.q3
 
-        odom_msg.twist.twist.linear.x = self.log_data.mvo.vel_x
-        odom_msg.twist.twist.linear.y = -self.log_data.mvo.vel_y
-        odom_msg.twist.twist.linear.z = -self.log_data.mvo.vel_z
+        odom_msg.twist.twist.linear.x = self.log_data.mvo.pos_x
+        odom_msg.twist.twist.linear.y = self.log_data.mvo.pos_y
+        odom_msg.twist.twist.linear.z = self.log_data.mvo.pos_z
 
         odom_msg.twist.twist.angular.x = self.log_data.imu.gyro_x
-        odom_msg.twist.twist.angular.y = -self.log_data.imu.gyro_y
-        odom_msg.twist.twist.angular.z = -self.log_data.imu.gyro_z
+        odom_msg.twist.twist.angular.y = self.log_data.imu.gyro_y
+        odom_msg.twist.twist.angular.z = self.log_data.imu.gyro_z
         
         self.tello_odom_pub.publish(odom_msg)
 
