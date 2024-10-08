@@ -55,7 +55,6 @@ class TelloBridgeNode(Node):
         self.takeoff_feedback = Takeoff.Feedback()
         self.takeoff_result = Takeoff.Result()
 
-
     def setup_publishers(self) -> None:
         self.tello_data_pub = self.create_publisher(TelloData, '/tello_data', 10)
         self.tello_imu_pub = self.create_publisher(Imu, '/tello_imu', 10)
@@ -104,8 +103,7 @@ class TelloBridgeNode(Node):
         action_func()
         feedback, result = (self.takeoff_feedback, self.takeoff_result) if action_name == "Takeoff" else (self.land_feedback, self.land_result)
 
-        # Initialize result correctly
-        result.success = True  # Assuming this is a boolean field
+        result.success = True
 
         count = 0
         timer = time.time()
