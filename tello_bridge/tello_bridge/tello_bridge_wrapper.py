@@ -55,6 +55,7 @@ class TelloBridgeNode(Node):
         self.takeoff_feedback = Takeoff.Feedback()
         self.takeoff_result = Takeoff.Result()
 
+
     def setup_publishers(self) -> None:
         self.tello_data_pub = self.create_publisher(TelloData, '/tello_data', 10)
         self.tello_imu_pub = self.create_publisher(Imu, '/tello_imu', 10)
@@ -103,7 +104,8 @@ class TelloBridgeNode(Node):
         action_func()
         feedback, result = (self.takeoff_feedback, self.takeoff_result) if action_name == "Takeoff" else (self.land_feedback, self.land_result)
 
-        result.success = True
+        # Initialize result correctly
+        result.success = True  # Assuming this is a boolean field
 
         count = 0
         timer = time.time()
@@ -234,46 +236,47 @@ class TelloBridgeNode(Node):
 
         self.data_msg.landed = self.landed
         self.tello_data_pub.publish(self.data_msg)
-
     def tello_imu_publish(self) -> None:
         imu_msg = Imu()
         imu_msg.header.stamp = self.get_clock().now().to_msg()
-
-        imu_msg.orientation.x = self.log_data.imu.q0
-        imu_msg.orientation.y = self.log_data.imu.q1
-        imu_msg.orientation.z = self.log_data.imu.q2
-        imu_msg.orientation.w = self.log_data.imu.q3
+        imu_msg.header.frame_id = "base_link"
+        imu_msg.orientation.w = self.log_data.imu.q0
+        imu_msg.orientation.x = self.log_data.imu.q1
+        imu_msg.orientation.y = -self.log_data.imu.q2
+        imu_msg.orientation.z = -self.log_data.imu.q3
 
         imu_msg.angular_velocity.x = self.log_data.imu.gyro_x
-        imu_msg.angular_velocity.y = self.log_data.imu.gyro_y
-        imu_msg.angular_velocity.z = self.log_data.imu.gyro_z
+        imu_msg.angular_velocity.y = -self.log_data.imu.gyro_y
+        imu_msg.angular_velocity.z = -self.log_data.imu.gyro_z
 
         imu_msg.linear_acceleration.x = self.log_data.imu.acc_x
-        imu_msg.linear_acceleration.y = self.log_data.imu.acc_x
-        imu_msg.linear_acceleration.z = self.log_data.imu.acc_x
-
+        imu_msg.linear_acceleration.y = -self.log_data.imu.acc_y
+        imu_msg.linear_acceleration.z = -self.log_data.imu.acc_z
+        
         self.tello_imu_pub.publish(imu_msg)
 
     def tello_odom_publish(self) -> None:
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
+        odom_msg.header.frame_id = "odom"
+        odom_msg.child_frame_id = "base_link"
         
         odom_msg.pose.pose.position.x = self.log_data.mvo.pos_x
-        odom_msg.pose.pose.position.y = self.log_data.mvo.pos_y
-        odom_msg.pose.pose.position.z = self.log_data.mvo.pos_z
+        odom_msg.pose.pose.position.y = -self.log_data.mvo.pos_y
+        odom_msg.pose.pose.position.z = -self.log_data.mvo.pos_z
 
-        odom_msg.pose.pose.orientation.x = self.log_data.imu.q0
-        odom_msg.pose.pose.orientation.y = self.log_data.imu.q1
-        odom_msg.pose.pose.orientation.z = self.log_data.imu.q2
-        odom_msg.pose.pose.orientation.w = self.log_data.imu.q3
+        odom_msg.pose.pose.orientation.w = self.log_data.imu.q0
+        odom_msg.pose.pose.orientation.x = self.log_data.imu.q1
+        odom_msg.pose.pose.orientation.y = -self.log_data.imu.q2
+        odom_msg.pose.pose.orientation.z = -self.log_data.imu.q3
 
-        odom_msg.twist.twist.linear.x = self.log_data.mvo.pos_x
-        odom_msg.twist.twist.linear.y = self.log_data.mvo.pos_y
-        odom_msg.twist.twist.linear.z = self.log_data.mvo.pos_z
+        odom_msg.twist.twist.linear.x = self.log_data.mvo.vel_x
+        odom_msg.twist.twist.linear.y = -self.log_data.mvo.vel_y
+        odom_msg.twist.twist.linear.z = -self.log_data.mvo.vel_z
 
         odom_msg.twist.twist.angular.x = self.log_data.imu.gyro_x
-        odom_msg.twist.twist.angular.y = self.log_data.imu.gyro_y
-        odom_msg.twist.twist.angular.z = self.log_data.imu.gyro_z
+        odom_msg.twist.twist.angular.y = -self.log_data.imu.gyro_y
+        odom_msg.twist.twist.angular.z = -self.log_data.imu.gyro_z
         
         self.tello_odom_pub.publish(odom_msg)
 
