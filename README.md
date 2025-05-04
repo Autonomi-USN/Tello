@@ -88,6 +88,35 @@ After that, **/tello_bridge_node** is created. This node publishes all the telem
 
 This node also have a subscriber, named **/cmd_vel**, used to move the robot. you need to publish a Twist message, with the values of translation and rotation of the drone.
 
+
+### Run controller
+
+After successfully running **/tello_bridge_node**, open a new terminal and run the following commands:
+
+
+```
+$ cd ~/ros2_ws/
+$ source install/setup.bash
+$ ros2 run tello_control tello_move_drone
+```
+
+### Control Drone with Python
+
+To move the drone, implement your desired motions in the `run()` function in `tello_move_drone.py`. To lift the drone off the ground, call `self.send_takeoff()`, and to land, call `self.send_land()`. Between these calls, you can move the drone by calling `self.move()`. The arguments are as follows:
+
+
+````
+self.move(
+  forward=0.5,   # + forward, – backward
+  lateral=0.0,   # + left,   – right
+  up=0.2,        # + up,       – down
+  turn=0.0,      # + turn left,     – turn right
+  duration=3.0   # seconds moving
+)
+```
+**Note:**  
+All `move()` arguments are automatically limited to [–1.0, 1.0].
+
 ## Troubleshooting
 
 ### Take off / land command is not working
