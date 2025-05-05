@@ -74,10 +74,10 @@ class TelloControlNode(Node):
     def move(self, forward: float, lateral: float, up: float, turn: float, duration: float):
 
         msg = Twist()
-        msg.linear.x = clamp(forward, -1.0, 1.0)
-        msg.linear.y = clamp(lateral, -1.0, 1.0)
-        msg.linear.z = clamp(up, -1.0, 1.0)
-        msg.angular.z = clamp(turn, -1.0, 1.0)
+        msg.linear.x = clamp(forward, -0.5, 0.5)
+        msg.linear.y = clamp(lateral, -0.5, 0.5)
+        msg.linear.z = clamp(up, -0.5, 0.5)
+        msg.angular.z = clamp(turn, -0.5, 0.5)
 
 
         rate = self.create_rate(1)  # 1 Hz
@@ -101,12 +101,12 @@ class TelloControlNode(Node):
         Implement your flight logic here by calling move().
         Example (fly in a little square):
 
-            self.move(0.5, 0.0, 0.0, 0.0, 1.5)  # forward
-            self.move(0.0, 0.5, 0.0, 0.0, 1.5)  # right
-            self.move(-0.5, 0.0, 0.0, 0.0, 1.5) # backward
-            self.move(0.0, -0.5, 0.0, 0.0, 1.5) # left
+            self.move(0.2, 0.0, 0.0, 0.0, 1.5)  # forward
+            self.move(0.0, 0.2, 0.0, 0.0, 1.5)  # right
+            self.move(-0.2, 0.0, 0.0, 0.0, 1.5) # backward
+            self.move(0.0, -0.2, 0.0, 0.0, 1.5) # left
         """
-
+ 
         self.send_land()
 
 def main(args=None):
@@ -118,6 +118,7 @@ def main(args=None):
         node.run()
     finally:
         node.cmd_pub.publish(Twist())
+        node.send_land()
         node.destroy_node()
         rclpy.shutdown()
     
