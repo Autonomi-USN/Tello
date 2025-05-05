@@ -115,7 +115,26 @@ self.move(
 )
 ```
 **Note:**  
-All `move()` arguments are automatically limited to [–1.0, 1.0].
+All `move()` arguments are automatically limited to [–0.5, 0.5].
+
+### Run Actions
+
+You can send commands to the drone directly through the terminal using ROS 2 actions. The takeoff and landing actions can be sent as follows:
+
+#### Take off
+
+```
+$ cd ~/ros2_ws/
+$ source install/setup.bash
+$ ros2 action send_goal /tello_takeoff tello_interfaces/action/Takeoff "{}"
+```
+
+#### Land
+```
+$ cd ~/ros2_ws/
+$ source install/setup.bash
+$ ros2 action send_goal /tello_land tello_interfaces/action/Land "{}"
+```
 
 ## Troubleshooting
 
