@@ -2,11 +2,8 @@
 from typing import Any, Callable, Union
 import rclpy
 from rclpy.node import Node
-import cv2
-from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import threading
-import av
 import traceback
 import time
 import sys
@@ -46,7 +43,6 @@ class TelloBridgeNode(Node):
         self.landed = True
         self.handle_img = False
 
-        self.cvBridge = CvBridge()
         self.tello = tello.Tello()
 
         self.data_msg = TelloData()
@@ -160,18 +156,8 @@ class TelloBridgeNode(Node):
 
     def handle_video_stream(self, drone: tello.Tello) -> None:
         try:
-            container = av.open(drone.get_video_stream())
-            frame_skip = 30
-            while True:
-                for frame in container.decode(video=0):
-                    if frame_skip > 0:
-                        frame_skip -= 1
-                        continue
-                    start_time = time.time()
-                    image = cv2.cvtColor(np.array(frame.to_image()), cv2.COLOR_RGB2BGR)
-                    self.publish_image(image)
-                    self.new_image = image
-                    frame_skip = int((time.time() - start_time) / max(frame.time_base, 1.0/60))
+            
+            pass
         except Exception as ex:
             self.handle_exception(ex)
 
@@ -290,11 +276,7 @@ class TelloBridgeNode(Node):
         self.tello_data_pub.publish(self.data_msg)
 
     def publish_image(self, image: np.ndarray) -> None:
-        try:
-            img_msg = self.cvBridge.cv2_to_imgmsg(image, encoding="bgr8")
-            self.image_pub.publish(img_msg)
-        except CvBridgeError as err:
-            self.get_logger().error(str(err))
+        pass
         
     @staticmethod    
     def clamp(n: float, minn: float, maxn: float) -> None:
