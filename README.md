@@ -51,8 +51,6 @@ The first step after installing all the dependencies in the previous section is 
 
 ### Set-up the environment
 
-First, download/clone this repository, then copy the packages inside the _tello_ folder into the source of your ROS workspace.
-
 If a ROS workspace created was not created yet, just run the following commands:
 
 ```
@@ -60,7 +58,14 @@ $ cd ~
 $ mkdir -p ~/ros2_ws/src
 ```
 
-Now paste the packages inside ~/ros2_ws/src. After that, use rosdep to install all the ROS dependencies.
+Now clone the repository and change its branch with:
+
+```
+$ git clone https://github.com/Autonomi-USN/Tello.git
+$ git switch feature/ros2-move-drone
+```
+
+After that, use rosdep to install all the ROS dependencies.
 
 ```
 $ cd ~/ros2_ws/
