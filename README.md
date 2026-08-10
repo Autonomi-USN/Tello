@@ -6,8 +6,9 @@
 <p align="center">
   <a href="#about-the-project">About the Project</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#packages-description">Packages description</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-  <a href="#how-to-connect-with-drone">How to Connect with Drone</a><br />
-  <a href="#dependencies">Dependencies</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+  <a href="#how-to-connect-with-drone">How to Connect with Drone</a> &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+  <a href="#dependencies">Dependencies</a><br />
+  <a href="#install-the-package">Install the Package</a> &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#how-to-run">How to Run</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#troubleshooting">Troubleshooting</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
   <a href="#possible-bugs">References</a>
@@ -44,6 +45,27 @@ Some python packages are needed to be able to run this wrapper. To install it, j
 ```
 $ pip install opencv-python av
 ```
+
+## Install the Package
+
+Download the package via git:
+
+```
+$ git clone https://github.com/Autonomi-USN/Tello.git
+```
+
+If using ROS2, change the branch to
+
+```
+$ git switch feature/ros2-move-drone
+```
+
+If using in a workshop, change the branch to
+
+```
+$ git switch feat/student-activity
+```
+
 
 ## How to Run
 
