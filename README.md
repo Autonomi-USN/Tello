@@ -51,18 +51,21 @@ $ pip install opencv-python av
 Download the package via git:
 
 ```
+$ cd ros_ws/
 $ git clone https://github.com/Autonomi-USN/Tello.git
 ```
 
-If using ROS2, change the branch to
+If using ROS2, change the branch with
 
 ```
+$ cd Tello/
 $ git switch feature/ros2-move-drone
 ```
 
 If using in a workshop, change the branch to
 
 ```
+$ cd Tello/
 $ git switch feat/student-activity
 ```
 
